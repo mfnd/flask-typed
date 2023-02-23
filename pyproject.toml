@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "flask-typed"
+version = "0.1.0"
+description = ""
+authors = ["Mustafa Efendioğlu <mfnd@protonmail.com>"]
+readme = "README.md"
+packages = [{include = "flask_typed"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^1.10.5"
+openapi-schema-pydantic = "^1.2.4"
+flask = "^2.2.3"
+docstring-parser = "^0.15"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
