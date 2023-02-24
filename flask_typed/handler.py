@@ -10,7 +10,8 @@ from pydantic import BaseModel
 
 from .docs_utils import Docstring
 from .errors import HttpError
-from .validation import Response, ParameterLocation, Parameter, ParameterValidationError, ValidationError
+from .response import Response
+from .parameter import ParameterLocation, Parameter, ParameterValidationError, ValidationError
 
 
 def get_parameter_defaults(func: FunctionType):

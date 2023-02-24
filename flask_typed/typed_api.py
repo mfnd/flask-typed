@@ -1,11 +1,25 @@
 import json
+from typing import Type
 
-from flask import Flask, render_template, render_template_string
+from flask import Flask, render_template_string
 from openapi_schema_pydantic import OpenAPI, Info
 from openapi_schema_pydantic.util import construct_open_api_with_schema_class
 
 from .docs_utils import redoc_template
-from .typed_resource import BoundResource
+from .typed_resource import BoundResource, TypedResource
+
+
+def join_path(path1: str, path2: str) -> str:
+    return f"{path1.rstrip('/')}/{path2.lstrip('/')}"
+
+
+class TypedBlueprint:
+
+    def __init__(self):
+        self.resources = {}
+
+    def add_resource(self, resource: Type[TypedResource], path: str):
+        self.resources[path] = resource
 
 
 class TypedAPI:
@@ -52,7 +66,7 @@ class TypedAPI:
         app.add_url_rule(self.docs_path, view_func=redoc)
         app.add_url_rule(self.openapi_path, view_func=get_openapi_schema)
 
-    def add_resource(self, path: str, resource):
+    def add_resource(self, resource: Type[TypedResource], path: str):
         if path in self.resources:
             raise Exception(f"URL is already registered: {path}")
         bound_resource = resource.bind(path)
@@ -61,6 +75,11 @@ class TypedAPI:
 
         if self.app is not None:
             self._register_resource(bound_resource)
+
+    def register_blueprint(self, blueprint: TypedBlueprint, url_prefix: str = ""):
+        for path, resource in blueprint.resources.items():
+            full_path = join_path(url_prefix, path)
+            self.add_resource(resource, full_path)
 
     def _register_resource(self, bound_resource: BoundResource):
         for method, handler in bound_resource.methods.items():
