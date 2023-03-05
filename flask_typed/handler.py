@@ -1,7 +1,6 @@
 import inspect
 import json
 from inspect import isclass
-from types import FunctionType
 from typing import Any
 
 import openapi_schema_pydantic as openapi
@@ -10,14 +9,8 @@ from pydantic import BaseModel
 
 from .docs_utils import Docstring
 from .errors import HttpError
-from .response import Response
 from .parameter import ParameterLocation, Parameter, ParameterValidationError, ValidationError
-
-
-def get_parameter_defaults(func: FunctionType):
-    defaults_len = len(func.__defaults__)
-    for arg_name, arg_default in zip(func.__code__.co_varnames[-defaults_len:], func.__defaults__):
-        pass
+from .response import Response
 
 
 class HttpHandler:
