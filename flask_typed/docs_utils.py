@@ -42,6 +42,7 @@ class Docstring:
         self.long_description = docstring.long_description
         self.params = {param.arg_name: param for param in docstring.params}
         self.returns = docstring.returns
+        self.raises = {exception.type_name: exception for exception in docstring.raises}
 
     def get_parameter_description(self, name: str) -> str:
         if parameter := self.params.get(name):

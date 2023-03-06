@@ -72,8 +72,8 @@ class HttpHandler:
 
         self.response = Response.from_type(
             handler_signature.return_annotation,
+            self.docstring,
             self.docs_metadata,
-            self._get_return_description()
         )
 
     def generate_operation(self) -> openapi.Operation:
@@ -157,7 +157,7 @@ class HttpHandler:
             if isinstance(response_value, BaseModel):
                 return current_app.response_class(
                     response=response_value.json(),
-                    status=200,
+                    status=getattr(response_value.Config, "status_code", 200),
                     mimetype='application/json',
                 )
             else:
@@ -167,8 +167,3 @@ class HttpHandler:
 
     def _get_parameter_description(self, param_name) -> str:
         return "" if self.docstring is None else self.docstring.get_parameter_description(param_name)
-
-    def _get_return_description(self) -> str:
-        if self.docstring:
-            return self.docstring.returns.description
-        return ""
