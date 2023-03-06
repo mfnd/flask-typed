@@ -1,3 +1,4 @@
+from flask import current_app
 from pydantic import BaseModel
 
 
@@ -18,6 +19,13 @@ class HttpError(Exception):
 
     def json(self):
         return self.response.json()
+
+    def flask_response(self):
+        return current_app.response_class(
+            response=self.json(),
+            status=self.status_code,
+            mimetype='application/json',
+        )
 
     @classmethod
     def schema(cls):

@@ -8,14 +8,15 @@ import pydantic
 from openapi_schema_pydantic.util import PydanticSchema
 from pydantic import BaseModel
 
+from flask_typed.docs.utils import get_builtin_type
 from .errors import HttpError
-from .docs_utils import _builtin_openapi_map
 
 
 class ParameterLocation(IntEnum):
     PATH = 1
     QUERY = 2
     BODY = 3
+    HEADER = 4
 
 
 class Parameter:
@@ -97,7 +98,7 @@ class Parameter:
                     )
                 )
         else:
-            openapi_type = _builtin_openapi_map.get(self.type)
+            openapi_type = get_builtin_type(self.type)
             if openapi_type is None:
                 raise TypeError(f"Unsupported type for parameter '{self.name}': {self.type}")
 
@@ -119,7 +120,7 @@ class Parameter:
         if isclass(self.type) and issubclass(self.type, BaseModel):
             schema = PydanticSchema(schema_class=self.type)
         else:
-            openapi_type = _builtin_openapi_map.get(self.type)
+            openapi_type = get_builtin_type(self.type)
             if openapi_type is None:
                 raise TypeError(f"Unsupported type for parameter '{self.name}': {self.type}")
 

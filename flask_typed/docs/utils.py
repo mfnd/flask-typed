@@ -3,7 +3,7 @@ from typing import Type
 
 import docstring_parser
 
-from .errors import HttpError
+from flask_typed.errors import HttpError
 
 _builtin_openapi_map = {
     builtins.bool: "boolean",
@@ -11,6 +11,10 @@ _builtin_openapi_map = {
     builtins.int: "integer",
     builtins.float: "number"
 }
+
+
+def get_builtin_type(ty: Type):
+    return _builtin_openapi_map.get(ty)
 
 
 class DocsMetadata:
@@ -41,7 +45,7 @@ class Docstring:
         self.short_description = docstring.short_description
         self.long_description = docstring.long_description
         self.params = {param.arg_name: param for param in docstring.params}
-        self.returns = docstring.returns
+        self.returns = {returns.type_name: returns for returns in docstring.many_returns}
         self.raises = {exception.type_name: exception for exception in docstring.raises}
 
     def get_parameter_description(self, name: str) -> str:

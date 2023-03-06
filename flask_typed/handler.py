@@ -7,10 +7,11 @@ import openapi_schema_pydantic as openapi
 from flask import request, current_app
 from pydantic import BaseModel
 
-from .docs_utils import Docstring
+from flask_typed.docs.utils import Docstring
 from .errors import HttpError
 from .parameter import ParameterLocation, Parameter, ParameterValidationError, ValidationError
-from .response import Response
+from flask_typed.docs.responses import ResponsesDocsBuilder
+from .response import BaseResponse
 
 
 class HttpHandler:
@@ -22,7 +23,7 @@ class HttpHandler:
         docstring = getattr(handler, "__doc__", None)
         self.docstring = Docstring(docstring) if docstring else None
         self.docs_metadata = getattr(handler, "docs_metadata", None)
-        self.response = None
+        self.responses = None
         self.parameters: list[Parameter] = []
         self.path_parameters = {}
         self.query_parameters = {}
@@ -70,11 +71,11 @@ class HttpHandler:
                 case ParameterLocation.BODY:
                     self.body_param = parameter
 
-        self.response = Response.from_type(
-            handler_signature.return_annotation,
-            self.docstring,
-            self.docs_metadata,
-        )
+        self.responses = ResponsesDocsBuilder(
+            return_type=handler_signature.return_annotation,
+            docstring=self.docstring,
+            docs=self.docs_metadata
+        ).build()
 
     def generate_operation(self) -> openapi.Operation:
         doc_parameters = []
@@ -86,11 +87,9 @@ class HttpHandler:
                 case ParameterLocation.BODY:
                     request_body = param.to_openapi_request_body()
 
-        responses = self.response.to_openapi_responses()
-
         return openapi.Operation(
             parameters=doc_parameters,
-            responses=responses,
+            responses=self.responses,
             requestBody=request_body,
             summary=self.docstring.short_description if self.docstring else "",
             description=self.docstring.long_description if self.docstring else "",
@@ -139,21 +138,15 @@ class HttpHandler:
             try:
                 validated_args = perform_validation(kwargs)
             except HttpError as e:
-                return current_app.response_class(
-                    response=e.json(),
-                    status=e.status_code,
-                    mimetype='application/json',
-                )
+                return e.flask_response()
 
             try:
                 response_value = handler(resource_cls, **validated_args)
             except HttpError as e:
-                return current_app.response_class(
-                    response=e.json(),
-                    status=e.status_code,
-                    mimetype='application/json',
-                )
+                return e.flask_response()
 
+            if isinstance(response_value, BaseResponse):
+                return response_value.flask_response()
             if isinstance(response_value, BaseModel):
                 return current_app.response_class(
                     response=response_value.json(),
