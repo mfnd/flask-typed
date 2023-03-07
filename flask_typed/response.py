@@ -10,7 +10,7 @@ class BaseResponse:
     status_code: int
 
     def flask_response(self):
-        ...
+        raise NotImplementedError
 
     @classmethod
     def schema(cls) -> openapi.Schema:
@@ -31,6 +31,8 @@ class Response(BaseResponse):
 
 
 class StreamingResponse(BaseResponse):
+    status_code = 200
+    mime_type = "text/plain"
 
     def __init__(self, generator: Generator, use_context=True):
         self._generator = generator

@@ -58,7 +58,7 @@ class ResponsesDocsBuilder:
                 if not isinstance(schema, openapi.Schema):
                     raise TypeError(
                         f"Response type {response_type} extending BaseResponse"
-                        f"does not implement schema() method properly: {schema}"
+                        f" does not implement schema() method properly: {schema}"
                     )
 
                 self.responses[status_code][mime_type].append(
@@ -118,4 +118,6 @@ class ResponsesDocsBuilder:
             key = return_type.__name__ if return_type is not None else None
             if returns := self.docstring.returns.get(key):
                 return returns.description
+            if raises := self.docstring.raises.get(key):
+                return raises.description
         return None

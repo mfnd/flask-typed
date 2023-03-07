@@ -1,9 +1,18 @@
+from abc import ABC
+
+import openapi_schema_pydantic as openapi
 from flask import current_app
 from pydantic import BaseModel
 
+from .response import BaseResponse
 
-class HttpError(Exception):
-    status_code: int = ...
+
+class BaseHttpError(Exception, BaseResponse, ABC):
+    pass
+
+
+class HttpError(BaseHttpError):
+    mime_type = "application/json"
 
     class ResponseModel(BaseModel):
         message: str | None = None
@@ -17,19 +26,33 @@ class HttpError(Exception):
         self.status_code = cls.status_code if status_code is None else status_code
         self.response = cls.ResponseModel(**kwargs)
 
-    def json(self):
-        return self.response.json()
-
     def flask_response(self):
         return current_app.response_class(
             response=self.json(),
             status=self.status_code,
-            mimetype='application/json',
+            mimetype=self.mime_type,
         )
 
+    def json(self) -> str:
+        return self.response.json()
+
     @classmethod
-    def schema(cls):
-        return cls.ResponseModel.schema()
+    def schema(cls) -> openapi.Schema:
+        return openapi.Schema.parse_obj(cls.ResponseModel.schema())
+
+
+class BadRequestError(HttpError):
+    status_code = 400
+
+    class ResponseModel(BaseModel):
+        message: str = "Bad request"
+
+
+class NotFoundError(HttpError):
+    status_code = 404
+
+    class ResponseModel(BaseModel):
+        message: str = "Not found"
 
 
 class InternalServerError(HttpError):
@@ -39,8 +62,3 @@ class InternalServerError(HttpError):
         message: str = "Internal server error"
 
 
-class NotFoundError(HttpError):
-    status_code = 404
-
-    class ResponseModel(BaseModel):
-        message: str = "Not found"
