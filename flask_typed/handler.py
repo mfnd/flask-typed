@@ -1,7 +1,7 @@
 import inspect
 import json
 from inspect import isclass
-from typing import Any
+from typing import Any, get_origin, Annotated, get_args
 
 import openapi_schema_pydantic as openapi
 from flask import request, current_app
@@ -27,6 +27,7 @@ class HttpHandler:
         self.parameters: list[Parameter] = []
         self.path_parameters = {}
         self.query_parameters = {}
+        self.header_parameters = {}
         self.body_param = None
 
         self._process_annotations()
@@ -37,11 +38,24 @@ class HttpHandler:
             if parameter.name == "self":
                 continue
 
+            source_name = parameter.name
             param_type = parameter.annotation
             if param_type is None:
                 raise TypeError(f"No type annotation is provided for parameter: {parameter.name}")
 
-            if isclass(param_type) and issubclass(param_type, BaseModel):
+            if get_origin(param_type) == Annotated:
+                metadata = get_args(param_type)
+                param_type = metadata[0]
+                location = metadata[1]
+
+                if location == ParameterLocation.HEADER:
+                    source_name = "-".join(
+                        s.capitalize() for s in parameter.name.split("_")
+                    )
+                if len(metadata) > 2:
+                    source_name = metadata[2]
+
+            elif isclass(param_type) and issubclass(param_type, BaseModel):
                 location = ParameterLocation.BODY
             elif parameter.name in self.path.path_parameters:
                 location = ParameterLocation.PATH
@@ -56,6 +70,7 @@ class HttpHandler:
 
             parameter = Parameter(
                 name=parameter.name,
+                source=source_name,
                 location=location,
                 param_type=param_type,
                 description=self._get_parameter_description(parameter.name),
@@ -68,6 +83,8 @@ class HttpHandler:
                     self.path_parameters[parameter.name] = parameter
                 case ParameterLocation.QUERY:
                     self.query_parameters[parameter.name] = parameter
+                case ParameterLocation.HEADER:
+                    self.header_parameters[parameter.name] = parameter
                 case ParameterLocation.BODY:
                     self.body_param = parameter
 
@@ -82,7 +99,7 @@ class HttpHandler:
         request_body = None
         for param in self.parameters:
             match param.location:
-                case ParameterLocation.QUERY | ParameterLocation.PATH:
+                case ParameterLocation.QUERY | ParameterLocation.PATH | ParameterLocation.HEADER:
                     doc_parameters.extend(param.to_openapi_parameters())
                 case ParameterLocation.BODY:
                     request_body = param.to_openapi_request_body()
@@ -98,6 +115,7 @@ class HttpHandler:
     def get_handler(self):
         path_params = self.path_parameters
         query_params = self.query_parameters
+        header_params = self.header_parameters
         body_param = self.body_param
         handler = self.handler
         resource_cls = self.resource_cls
@@ -106,14 +124,21 @@ class HttpHandler:
             validated_args = {}
             validation_errors = []
             for name, param in path_params.items():
-                val = kwargs.get(name)
+                val = kwargs.get(param.source)
                 try:
                     validated_args[name] = param.validate(val)
                 except ParameterValidationError as e:
                     validation_errors.append(e)
 
             for name, param in query_params.items():
-                val = request.args.get(name)
+                val = request.args.get(param.source)
+                try:
+                    validated_args[name] = param.validate(val)
+                except ParameterValidationError as e:
+                    validation_errors.append(e)
+
+            for name, param in header_params.items():
+                val = request.headers.get(param.source)
                 try:
                     validated_args[name] = param.validate(val)
                 except ParameterValidationError as e:

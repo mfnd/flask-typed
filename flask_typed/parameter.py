@@ -24,12 +24,14 @@ class Parameter:
     def __init__(
             self,
             name: str,
+            source: str,
             location: ParameterLocation,
             param_type: Type,
             description: str,
             default_value: Any
     ):
         self.name = name
+        self.source = source
         self.location = location
         self.description = description
         self.is_optional = False
@@ -98,6 +100,7 @@ class Parameter:
                     )
                 )
         else:
+            print(self.type, self.source)
             openapi_type = get_builtin_type(self.type)
             if openapi_type is None:
                 raise TypeError(f"Unsupported type for parameter '{self.name}': {self.type}")
@@ -107,7 +110,7 @@ class Parameter:
                 schema.default = self.default_value
             parameters.append(
                 openapi.Parameter(
-                    name=self.name,
+                    name=self.source,
                     description=self.description,
                     param_in=location,
                     param_schema=schema,
@@ -161,7 +164,7 @@ class ParameterValidationError(Exception):
                 details.append(error)
 
         return ParameterValidationErrorModel(
-            parameter=self.parameter.name,
+            parameter=self.parameter.source,
             location=self.parameter.location.name.lower(),
             details=details
         )
