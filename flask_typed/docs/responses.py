@@ -103,7 +103,8 @@ class ResponsesDocsBuilder:
 
                 contents[mime_type] = openapi.MediaType(schema=schema)
 
-            if not description:
+            # If no description is found for specific return type, use generic return docstring for successes
+            if not description and 200 <= status_code < 300:
                 description = self._get_return_description(None)
 
             response_docs[str(status_code)] = openapi.Response(

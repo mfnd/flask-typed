@@ -41,24 +41,26 @@ class HttpError(BaseHttpError):
         return openapi.Schema.parse_obj(cls.ResponseModel.schema())
 
 
-class BadRequestError(HttpError):
-    status_code = 400
+class MessageHttpError(HttpError):
+    message: str = "Error"
 
-    class ResponseModel(BaseModel):
-        message: str = "Bad request"
+    def __init_subclass__(cls, **kwargs):
+        class ResponseModel(BaseModel):
+            message: str | None = cls.message
+
+        cls.ResponseModel = ResponseModel
+
+
+class BadRequestError(MessageHttpError):
+    status_code = 400
+    message = "Bad request"
 
 
 class NotFoundError(HttpError):
     status_code = 404
-
-    class ResponseModel(BaseModel):
-        message: str = "Not found"
+    message = "Not found"
 
 
 class InternalServerError(HttpError):
     status_code = 500
-
-    class ResponseModel(BaseModel):
-        message: str = "Internal server error"
-
-
+    message = "Internal server error"
