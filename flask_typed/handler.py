@@ -1,16 +1,16 @@
 import inspect
-import json
 from inspect import isclass
-from typing import Any, get_origin, Annotated, get_args
+from typing import Any, get_origin, Annotated, get_args, Type
 
 import openapi_schema_pydantic as openapi
 from flask import request, current_app
 from pydantic import BaseModel
 
+from flask_typed.docs.responses import ResponsesDocsBuilder
 from flask_typed.docs.utils import Docstring
 from .errors import HttpError
 from .parameter import ParameterLocation, Parameter, ParameterValidationError, ValidationError
-from flask_typed.docs.responses import ResponsesDocsBuilder
+from .parsers import RequestParser
 from .response import BaseResponse
 
 
@@ -25,10 +25,7 @@ class HttpHandler:
         self.docs_metadata = getattr(handler, "docs_metadata", None)
         self.responses = None
         self.parameters: list[Parameter] = []
-        self.path_parameters = {}
-        self.query_parameters = {}
-        self.header_parameters = {}
-        self.body_param = None
+        self.request_parsers: dict[str, Type[RequestParser]] = {}
 
         self._process_annotations()
 
@@ -42,6 +39,10 @@ class HttpHandler:
             param_type = parameter.annotation
             if param_type is None:
                 raise TypeError(f"No type annotation is provided for parameter: {parameter.name}")
+
+            if isclass(param_type) and issubclass(param_type, RequestParser):
+                self.request_parsers[source_name] = param_type
+                continue
 
             if get_origin(param_type) == Annotated:
                 metadata = get_args(param_type)
@@ -78,15 +79,6 @@ class HttpHandler:
             )
 
             self.parameters.append(parameter)
-            match parameter.location:
-                case ParameterLocation.PATH:
-                    self.path_parameters[parameter.name] = parameter
-                case ParameterLocation.QUERY:
-                    self.query_parameters[parameter.name] = parameter
-                case ParameterLocation.HEADER:
-                    self.header_parameters[parameter.name] = parameter
-                case ParameterLocation.BODY:
-                    self.body_param = parameter
 
         self.responses = ResponsesDocsBuilder(
             return_type=handler_signature.return_annotation,
@@ -113,42 +105,24 @@ class HttpHandler:
         )
 
     def get_handler(self):
-        path_params = self.path_parameters
-        query_params = self.query_parameters
-        header_params = self.header_parameters
-        body_param = self.body_param
+        parameters = self.parameters
+        parsers = self.request_parsers
         handler = self.handler
         resource_cls = self.resource_cls
 
         def perform_validation(kwargs) -> dict[str, Any]:
             validated_args = {}
             validation_errors = []
-            for name, param in path_params.items():
-                val = kwargs.get(param.source)
+
+            for param in parameters:
                 try:
-                    validated_args[name] = param.validate(val)
+                    validated_args[param.name] = param.validate(request, kwargs)
                 except ParameterValidationError as e:
                     validation_errors.append(e)
 
-            for name, param in query_params.items():
-                val = request.args.get(param.source)
+            for name, parser in parsers.items():
                 try:
-                    validated_args[name] = param.validate(val)
-                except ParameterValidationError as e:
-                    validation_errors.append(e)
-
-            for name, param in header_params.items():
-                val = request.headers.get(param.source)
-                try:
-                    validated_args[name] = param.validate(val)
-                except ParameterValidationError as e:
-                    validation_errors.append(e)
-
-            if body_param:
-                try:
-                    validated_args[body_param.name] = body_param.validate(
-                        json.loads(request.data)
-                    )
+                    validated_args[name] = parser.parse_request(request)
                 except ParameterValidationError as e:
                     validation_errors.append(e)
 

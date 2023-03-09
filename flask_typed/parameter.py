@@ -1,3 +1,4 @@
+import json
 from enum import IntEnum
 from inspect import isclass
 from types import UnionType, NoneType
@@ -10,6 +11,7 @@ from pydantic import BaseModel
 
 from flask_typed.docs.utils import get_builtin_type
 from .errors import HttpError
+from .parsers import QueryParser, HeaderParser
 
 
 class ParameterLocation(IntEnum):
@@ -28,7 +30,7 @@ class Parameter:
             location: ParameterLocation,
             param_type: Type,
             description: str,
-            default_value: Any
+            default_value: Any,
     ):
         self.name = name
         self.source = source
@@ -39,16 +41,15 @@ class Parameter:
         self.default_value = default_value
 
         self._init_types(param_type)
-        self._init_validator(self.type, self.is_optional)
+        self._init_data_getter()
+        self._init_validator(self.type)
 
     def _init_types(self, param_type: Type):
-        allow_none = False
         actual_type = None
         origin_type = get_origin(param_type)
         if origin_type is UnionType:
             for alternate_type in get_args(param_type):
                 if alternate_type is NoneType:
-                    allow_none = True
                     continue
                 if actual_type is not None:
                     raise Exception("Multiple argument types are provided")
@@ -63,22 +64,44 @@ class Parameter:
         else:
             self.is_optional = True
 
-    def _init_validator(self, param_type, allow_none: bool):
-        def validator(value):
-            if value is None:
-                if allow_none is True:
-                    return None
-                else:
-                    raise ValueError("Parameter is not optional")
+    def _init_data_getter(self):
+        match self.location:
+            case ParameterLocation.QUERY:
+                def get_query_param(request, _path_params):
+                    return request.args.get(self.source)
+                self.get_data = get_query_param
+            case ParameterLocation.HEADER:
+                def get_header_param(request, _path_params):
+                    return request.headers.get(self.source)
+                self.get_data = get_header_param
+            case ParameterLocation.PATH:
+                def get_path_param(_request, path_params):
+                    return path_params.get(self.source)
+                self.get_data = get_path_param
+            case ParameterLocation.BODY:
+                def get_body_param(request, _path_params):
+                    return request.data
+                self.get_data = get_body_param
+            case _:
+                raise ValueError(f"Invalid parameter location: {self.location}")
 
-            if issubclass(param_type, BaseModel):
-                return param_type.parse_obj(value)
+    def _init_validator(self, param_type):
+        if issubclass(param_type, BaseModel):
+            def model_validator(value):
+                return param_type.parse_obj(
+                    json.loads(value)
+                )
+            self.validator = model_validator
+        else:
+            self.validator = param_type
 
-            return param_type(value)
-
-        self.validator = validator
-
-    def validate(self, value):
+    def validate(self, request, path_params):
+        value = self.get_data(request, path_params)
+        if value is None:
+            if self.is_optional is True:
+                return self.default_value
+            else:
+                raise ParameterValidationError(self, errors=["Parameter is not optional"])
         try:
             return self.validator(value)
         except pydantic.ValidationError as e:
@@ -99,8 +122,9 @@ class Parameter:
                         param_schema=openapi.Schema.parse_obj(prop)
                     )
                 )
+        elif isclass(self.type) and issubclass(self.type, (QueryParser, HeaderParser)):
+            parameters.extend(self.type.schema())
         else:
-            print(self.type, self.source)
             openapi_type = get_builtin_type(self.type)
             if openapi_type is None:
                 raise TypeError(f"Unsupported type for parameter '{self.name}': {self.type}")
