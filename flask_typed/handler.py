@@ -140,7 +140,7 @@ class HttpHandler:
                 return e.flask_response()
 
             try:
-                response_value = handler(resource_cls, **validated_args)
+                response_value = handler(resource_cls(), **validated_args)
             except HttpError as e:
                 return e.flask_response()
 
