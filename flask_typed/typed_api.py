@@ -87,7 +87,8 @@ class TypedAPI:
                 bound_resource.path.path,
                 bound_resource.resource_cls.__name__.lower() + method,
                 handler.get_handler(),
-                methods=[method]
+                methods=[method],
+                provide_automatic_options=False
             )
 
     def get_openapi_schema(self):
