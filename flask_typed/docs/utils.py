@@ -1,20 +1,29 @@
 import builtins
+from datetime import date, datetime, time
 from typing import Type
+from uuid import UUID
 
 import docstring_parser
+import openapi_schema_pydantic as openapi
 
 from flask_typed.errors import HttpError
 
 _builtin_openapi_map = {
-    builtins.bool: "boolean",
-    builtins.str: "string",
-    builtins.int: "integer",
-    builtins.float: "number"
+    builtins.bool: openapi.Schema(type="boolean"),
+    builtins.str: openapi.Schema(type="string"),
+    builtins.int: openapi.Schema(type="integer"),
+    builtins.float: openapi.Schema(type="number"),
+    datetime: openapi.Schema(type="string", format="date-time"),
+    date: openapi.Schema(type="string", format="date"),
+    time: openapi.Schema(type="string", format="time"),
+    UUID: openapi.Schema(type="string", format="uuid"),
 }
 
 
-def get_builtin_type(ty: Type):
-    return _builtin_openapi_map.get(ty)
+def get_builtin_type(ty: Type) -> openapi.Schema | None:
+    if schema := _builtin_openapi_map.get(ty):
+        return schema.copy()
+    return None
 
 
 class DocsMetadata:

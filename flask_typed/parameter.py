@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from flask_typed.docs.utils import get_builtin_type
 from .errors import HttpError
 from .parsers import QueryParser, HeaderParser
+from .validators import VALIDATORS
 
 
 class ParameterLocation(IntEnum):
@@ -92,6 +93,8 @@ class Parameter:
                     json.loads(value)
                 )
             self.validator = model_validator
+        elif validator := VALIDATORS.get(param_type):
+            self.validator = validator
         else:
             self.validator = param_type
 
@@ -125,11 +128,10 @@ class Parameter:
         elif isclass(self.type) and issubclass(self.type, (QueryParser, HeaderParser)):
             parameters.extend(self.type.schema())
         else:
-            openapi_type = get_builtin_type(self.type)
-            if openapi_type is None:
+            schema = get_builtin_type(self.type)
+            if schema is None:
                 raise TypeError(f"Unsupported type for parameter '{self.name}': {self.type}")
 
-            schema = openapi.Schema(type=openapi_type)
             if self.default_value is not Ellipsis:
                 schema.default = self.default_value
             parameters.append(
@@ -147,11 +149,9 @@ class Parameter:
         if isclass(self.type) and issubclass(self.type, BaseModel):
             schema = PydanticSchema(schema_class=self.type)
         else:
-            openapi_type = get_builtin_type(self.type)
-            if openapi_type is None:
+            schema = get_builtin_type(self.type)
+            if schema is None:
                 raise TypeError(f"Unsupported type for parameter '{self.name}': {self.type}")
-
-            schema = openapi_type
 
         return openapi.RequestBody(
             content={

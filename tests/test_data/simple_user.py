@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic import BaseModel
 
 from flask_typed import TypedResource
@@ -8,6 +10,7 @@ class User(BaseModel):
     id: int
     name: str
     age: int
+    join_date: date
 
 
 class UserCreateBody(BaseModel):
@@ -22,7 +25,8 @@ class UserResource(TypedResource):
             self,
             user_id: int | None = None,
             name: str | None = None,
-            age_gt: int | None = None
+            age_gt: int | None = None,
+            join_date: date | None = None,
     ) -> User:
         """
         Retrieves user
@@ -32,13 +36,15 @@ class UserResource(TypedResource):
         :param user_id: User ID
         :param name: First name
         :param age_gt: Age
+        :param join_date: Join date
         :return: User details
         """
 
         return User(
             id=user_id if user_id else 0,
             name=name if name else "default",
-            age=10 if age_gt and age_gt < 10 else 5
+            age=10 if age_gt and age_gt < 10 else 5,
+            join_date=join_date if join_date else date(2000, 1, 1),
         )
 
     def post(self, user: UserCreateBody) -> User:

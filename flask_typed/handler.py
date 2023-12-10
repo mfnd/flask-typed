@@ -148,7 +148,7 @@ class HttpHandler:
                 return response_value.flask_response()
             if isinstance(response_value, BaseModel):
                 return current_app.response_class(
-                    response=response_value.json(),
+                    response=response_value.json(by_alias=True),
                     status=getattr(response_value.Config, "status_code", 200),
                     mimetype='application/json',
                 )
