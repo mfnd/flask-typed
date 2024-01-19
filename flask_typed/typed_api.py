@@ -2,8 +2,8 @@ import json
 from typing import Type
 
 from flask import Flask, render_template_string
-from openapi_schema_pydantic import OpenAPI, Info
-from openapi_schema_pydantic.util import construct_open_api_with_schema_class
+from openapi_pydantic import OpenAPI, Info
+from openapi_pydantic.util import construct_open_api_with_schema_class
 
 from flask_typed.docs.utils import redoc_template
 from .typed_resource import BoundResource, TypedResource
@@ -93,4 +93,4 @@ class TypedAPI:
 
     def get_openapi_schema(self):
         open_api = construct_open_api_with_schema_class(self.docs)
-        return json.loads(open_api.json(by_alias=True, exclude_none=True))
+        return json.loads(open_api.model_dump_json(by_alias=True, exclude_none=True))

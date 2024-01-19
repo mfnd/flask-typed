@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import TypeVar
 
-import openapi_schema_pydantic as openapi
+import openapi_pydantic as openapi
 from flask import Request
 from werkzeug.datastructures import MultiDict, Headers
 

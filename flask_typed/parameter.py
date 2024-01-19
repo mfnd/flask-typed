@@ -4,9 +4,9 @@ from inspect import isclass
 from types import UnionType, NoneType
 from typing import Type, Any, get_origin, get_args, Sequence
 
-import openapi_schema_pydantic as openapi
+import openapi_pydantic as openapi
 import pydantic
-from openapi_schema_pydantic.util import PydanticSchema
+from openapi_pydantic.util import PydanticSchema
 from pydantic import BaseModel
 
 from flask_typed.docs.utils import get_builtin_type
@@ -89,7 +89,7 @@ class Parameter:
     def _init_validator(self, param_type):
         if issubclass(param_type, BaseModel):
             def model_validator(value):
-                return param_type.parse_obj(
+                return param_type.model_validate(
                     json.loads(value)
                 )
             self.validator = model_validator
@@ -122,7 +122,7 @@ class Parameter:
                     openapi.Parameter(
                         name=name,
                         param_in=location,
-                        param_schema=openapi.Schema.parse_obj(prop)
+                        param_schema=openapi.Schema.model_validate(prop)
                     )
                 )
         elif isclass(self.type) and issubclass(self.type, (QueryParser, HeaderParser)):

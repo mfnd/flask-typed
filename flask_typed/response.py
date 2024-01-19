@@ -1,10 +1,9 @@
-from typing import Generator, Any
+from typing import Generator, ClassVar, TypedDict, NotRequired
 
-import openapi_schema_pydantic as openapi
+import openapi_pydantic as openapi
 from flask import current_app, stream_with_context
-from openapi_schema_pydantic.util import PydanticSchema
-from pydantic import BaseModel
-
+from openapi_pydantic.util import PydanticSchema
+from pydantic import BaseModel, RootModel
 
 _pydantic_export_config_fields = [
     "include",
@@ -16,6 +15,17 @@ _pydantic_export_config_fields = [
 ]
 
 
+class JsonConfig(TypedDict):
+    include: NotRequired[str | set[str]]
+    exclude: NotRequired[str | set[str]]
+    by_alias: NotRequired[bool]
+    exclude_unset: NotRequired[bool]
+    exclude_defaults: NotRequired[bool]
+    exclude_none: NotRequired[bool]
+    round_trip: NotRequired[bool]
+    warnings: NotRequired[bool]
+
+
 class BaseResponseConfig:
     mime_type: str = "text/plain"
     status_code: int = 200
@@ -23,46 +33,48 @@ class BaseResponseConfig:
 
 class BaseResponse:
 
-    class ResponseConfig:
-        pass
-
-    def __init_subclass__(cls, **kwargs):
-        response_config = cls.ResponseConfig
-        cls._mime_type = getattr(response_config, "mime_type", BaseResponseConfig.mime_type)
-        cls._status_code = getattr(response_config, "status_code", BaseResponseConfig.status_code)
+    mime_type: ClassVar[str] = "text/plain"
+    status_code: ClassVar[int] = 200
 
     def flask_response(self):
         raise NotImplementedError
 
     @classmethod
     def schema(cls) -> openapi.Schema:
-        return openapi.Schema(type="string")
+        raise NotImplementedError
 
 
-class ModelResponse(BaseModel, BaseResponse):
+class ModelResponse(BaseResponse):
 
-    def __init_subclass__(cls, **kwargs):
-        export_config = {}
+    json_config: ClassVar[dict] = {}
 
-        for field in _pydantic_export_config_fields:
-            config = getattr(cls.ResponseConfig, field, ...)
-            if config is not ...:
-                export_config[field] = config
+    mime_type = "application/json"
 
-        cls._export_config = export_config
+    def __init_subclass__(cls: type[BaseModel], **kwargs):
+        if not issubclass(cls, BaseModel):
+            raise TypeError(f"Type {cls.__name__} should be subclass of {BaseModel} since it is a subclass of "
+                            f"ModelResponse")
 
         super().__init_subclass__(**kwargs)
 
     def flask_response(self):
         return current_app.response_class(
-            response=self.json(**self._export_config) if self._export_config else self.json(),
-            mimetype=self._mime_type,
-            status=self._status_code
+            response=self.model_dump_json(**self.json_config),
+            mimetype=self.mime_type,
+            status=self.status_code
         )
 
     @classmethod
     def schema(cls) -> openapi.Schema:
         return PydanticSchema(schema_class=cls)
+
+
+class BaseModelResponse(BaseModel, ModelResponse):
+    pass
+
+
+class RootModelResponse(RootModel, ModelResponse):
+    pass
 
 
 class Response(BaseResponse):
@@ -92,3 +104,7 @@ class StreamingResponse(BaseResponse):
             mimetype=self.mime_type,
             status=self.status_code
         )
+
+    @classmethod
+    def schema(cls) -> openapi.Schema:
+        return openapi.Schema(type="string")

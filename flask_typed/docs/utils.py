@@ -4,7 +4,7 @@ from typing import Type
 from uuid import UUID
 
 import docstring_parser
-import openapi_schema_pydantic as openapi
+import openapi_pydantic as openapi
 
 from flask_typed.errors import HttpError
 
@@ -22,7 +22,7 @@ _builtin_openapi_map = {
 
 def get_builtin_type(ty: Type) -> openapi.Schema | None:
     if schema := _builtin_openapi_map.get(ty):
-        return schema.copy()
+        return schema.model_copy()
     return None
 
 
