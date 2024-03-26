@@ -3,8 +3,8 @@ from inspect import isclass
 from types import UnionType
 from typing import get_origin, get_args, NamedTuple, Type
 
-import openapi_schema_pydantic as openapi
-from openapi_schema_pydantic.util import PydanticSchema
+import openapi_pydantic as openapi
+from openapi_pydantic.util import PydanticSchema
 from pydantic import BaseModel
 
 from flask_typed.errors import HttpError
@@ -44,7 +44,7 @@ class ResponsesDocsBuilder:
         if isclass(response_type):
             description = self._get_return_description(response_type)
             if issubclass(response_type, BaseModel):
-                status_code = getattr(response_type.Config, "status_code", 200)
+                status_code = response_type.model_config.get("status_code", 200)
                 self.responses[status_code]["application/json"].append(
                     ResponseInfo(
                         schema=PydanticSchema(schema_class=response_type),

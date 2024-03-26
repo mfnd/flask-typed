@@ -1,6 +1,6 @@
 import re
 
-import openapi_schema_pydantic as openapi
+import openapi_pydantic as openapi
 from flask.views import http_method_funcs
 
 from .handler import HttpHandler

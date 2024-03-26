@@ -1,6 +1,6 @@
 from abc import ABC
 
-import openapi_schema_pydantic as openapi
+import openapi_pydantic as openapi
 from flask import current_app
 from pydantic import BaseModel
 
@@ -34,11 +34,11 @@ class HttpError(BaseHttpError):
         )
 
     def json(self) -> str:
-        return self.response.json()
+        return self.response.model_dump_json()
 
     @classmethod
     def schema(cls) -> openapi.Schema:
-        return openapi.Schema.parse_obj(cls.ResponseModel.schema())
+        return openapi.Schema.model_validate(cls.ResponseModel.model_json_schema())
 
 
 class MessageHttpError(HttpError):

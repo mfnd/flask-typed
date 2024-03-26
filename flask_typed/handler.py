@@ -2,7 +2,7 @@ import inspect
 from inspect import isclass
 from typing import Any, get_origin, Annotated, get_args, Type
 
-import openapi_schema_pydantic as openapi
+import openapi_pydantic as openapi
 from flask import request, current_app
 from pydantic import BaseModel
 
@@ -148,8 +148,8 @@ class HttpHandler:
                 return response_value.flask_response()
             if isinstance(response_value, BaseModel):
                 return current_app.response_class(
-                    response=response_value.json(by_alias=True),
-                    status=getattr(response_value.Config, "status_code", 200),
+                    response=response_value.model_dump_json(by_alias=True),
+                    status=response_value.model_config.get("status_code", 200),
                     mimetype='application/json',
                 )
             else:

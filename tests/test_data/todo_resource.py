@@ -1,6 +1,6 @@
 from datetime import datetime
 
-import openapi_schema_pydantic as openapi
+import openapi_pydantic as openapi
 from pydantic import BaseModel
 from werkzeug.datastructures import MultiDict
 
@@ -22,8 +22,7 @@ class BlogPostListResponse(BaseModel):
     count: int
     items: list[BlogPost]
 
-    class Config:
-        status_code = 200
+    model_config = {"status_code": 200}
 
 
 class BlogPostCreateRequest(BaseModel):
