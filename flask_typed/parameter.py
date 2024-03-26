@@ -164,7 +164,7 @@ class Parameter:
 
 def repr_pydantic_validation_error(err: pydantic.ValidationError) -> Sequence[str]:
     for error in err.errors():
-        yield f"{error['msg']}: {'.'.join(error['loc'])}"
+        yield f"{error['msg']}: {'.'.join(str(loc) for loc in error['loc'])}"
 
 
 class ParameterValidationErrorModel(BaseModel):
