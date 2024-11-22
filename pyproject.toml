@@ -10,7 +10,7 @@ packages = [{include = "flask_typed"}]
 python = "^3.10"
 pydantic = "^2.5.3"
 openapi-pydantic = "^0.4.0"
-flask = "^2.2.3"
+flask = ">=2.2.3"
 docstring-parser = "^0.15"
 
 
