@@ -86,7 +86,7 @@ class UnprocessableContentError(HttpError):
 
 class TooManyRequestsError(HttpError):
     status_code = HTTPStatus.TOO_MANY_REQUESTS
-    message = "Internal server error"
+    message = "Too many requests"
 
 
 class InternalServerError(HttpError):
