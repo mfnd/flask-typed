@@ -4,6 +4,7 @@ import openapi_pydantic as openapi
 from flask import current_app
 from pydantic import BaseModel
 
+from http import HTTPStatus
 from .response import BaseResponse
 
 
@@ -19,7 +20,9 @@ class HttpError(BaseHttpError):
 
     def __init_subclass__(cls, **kwargs):
         if not issubclass(cls.ResponseModel, BaseModel):
-            raise TypeError(f"ResponseModel should inherit pydantic BaseModel: {cls.__name__}")
+            raise TypeError(
+                f"ResponseModel should inherit pydantic BaseModel: {cls.__name__}"
+            )
 
     def __init__(self, status_code: int | None = None, **kwargs):
         cls = self.__class__
@@ -51,16 +54,41 @@ class MessageHttpError(HttpError):
         cls.ResponseModel = ResponseModel
 
 
-class BadRequestError(MessageHttpError):
-    status_code = 400
+class BadRequestError(HttpError):
+    status_code = HTTPStatus.BAD_REQUEST
     message = "Bad request"
 
 
 class NotFoundError(HttpError):
-    status_code = 404
+    status_code = HTTPStatus.NOT_FOUND
     message = "Not found"
 
 
+class MethodNotAllowedError(HttpError):
+    status_code = HTTPStatus.METHOD_NOT_ALLOWED
+    message = "Method not allowed"
+
+
+class ConflictError(HttpError):
+    status_code = HTTPStatus.CONFLICT
+    message = "Conflict"
+
+
+class UnsupportedMediaTypeError(HttpError):
+    status_code = HTTPStatus.UNSUPPORTED_MEDIA_TYPE
+    message = "Unsupported media type"
+
+
+class UnprocessableContentError(HttpError):
+    status_code = HTTPStatus.UNPROCESSABLE_ENTITY
+    message = "Unprocessable content"
+
+
+class TooManyRequestsError(HttpError):
+    status_code = HTTPStatus.TOO_MANY_REQUESTS
+    message = "Too many requests"
+
+
 class InternalServerError(HttpError):
-    status_code = 500
+    status_code = HTTPStatus.INTERNAL_SERVER_ERROR
     message = "Internal server error"
