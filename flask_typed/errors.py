@@ -64,16 +64,6 @@ class NotFoundError(HttpError):
     message = "Not found"
 
 
-class InternalServerError(HttpError):
-    status_code = HTTPStatus.INTERNAL_SERVER_ERROR
-    message = "Internal server error"
-
-
-class TooManyRequestsError(HttpError):
-    status_code = HTTPStatus.TOO_MANY_REQUESTS
-    message = "Internal server error"
-
-
 class MethodNotAllowedError(HttpError):
     status_code = HTTPStatus.METHOD_NOT_ALLOWED
     message = "Method not allowed"
@@ -87,3 +77,18 @@ class ConflictError(HttpError):
 class UnsupportedMediaTypeError(HttpError):
     status_code = HTTPStatus.UNSUPPORTED_MEDIA_TYPE
     message = "Unsupported media type"
+
+
+class UnprocessableContentError(HttpError):
+    status_code = HTTPStatus.UNPROCESSABLE_ENTITY
+    message = "Unprocessable content"
+
+
+class TooManyRequestsError(HttpError):
+    status_code = HTTPStatus.TOO_MANY_REQUESTS
+    message = "Internal server error"
+
+
+class InternalServerError(HttpError):
+    status_code = HTTPStatus.INTERNAL_SERVER_ERROR
+    message = "Internal server error"
